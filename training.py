@@ -26,8 +26,24 @@ class backProp():
         z = self.sigmoid((np.dot(weight,img_data))+bias)
         return z
             
-    def forwardPath(self,img,label):
+    def forwardPath(self,trails,mini_batch_size,datafile):
         w1,w2,b1,b2 = self.w1,self.w2,self.b1,self.b2
+
+        np.random.shuffle(datafile)
+        if (mini_batch_size >= len(datafile)):
+            raise ValueError("mini_batch_size should be less than the datafile size")
+            exit()
+
+        selector = np.random.randint(len(datafile)-mini_batch_size)
+        
+        
+        mini_batch = datafile[selector:selector+mini_batch_size]
+        img_data,label_data = [i[0] for i in datafile],[i[1] for i in datafile]
+        img_data_reshaped = np.reshape(img_data,(len(img_data),np.size(img_data[0])))
+
+
+
+
         hOutput = []
         for i in range(self.hiddensize):
             hiddenOutput = self.activation(w1[:,i],b1[i],img)
@@ -49,13 +65,13 @@ class backProp():
         
         
 f = data_loader.data_loader()
-a = f.loading("training")
-img,label = 
-imgshaped = np.reshape(img,(len(img),28*28))
+datafile = f.loading("training")
+datafile = list(datafile)
+
 test = backProp(28*28,10,10)
-result = []
-for i in range(len(label)):
-    tests = test.forwardPath(imgshaped[i])
+
+for i in range(len(datafile)):
+    tests = test.forwardPath(2,10000,datafile)
     result.append(np.argmax(tests))
 print (result)
 

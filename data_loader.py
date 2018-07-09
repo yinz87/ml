@@ -32,18 +32,11 @@ class data_loader():
             np.place(img,img!=0,1)
             
         Image_Label = lambda i: (img[i],label[i])
-        dataFile = []
         for j in range(len(label)):
-            dataFile.append(Image_Label(j))
-        return dataFile
+            yield Image_Label(j)
 
         
     def drawing(self,img):
         plt.imshow(img,cmap=mp.cm.Greys)
         plt.show()
         
-#f = data_loader()
-#a = f.loading("training")
-#f.drawing(Image_Label)
-#label,img = a[0]
-#f.drawing(img)
