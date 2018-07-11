@@ -48,39 +48,46 @@ class backProp():
                 hiddenOutput = self.activation(w1[i],b1[i],self.img_data_reshaped) # dot product of ith column and img data
                 hOutput.append(hiddenOutput)
             hOutput = np.transpose(hOutput) #shape.hOutput = [mini_batch_size,hidden_neuron_size]
-                
+
             for j in range(self.outputsize):
                 finalOutput = self.activation(w2[j],b2[j],hOutput)
                 fOutput.append(finalOutput)
             fOutput = np.transpose(fOutput)
-            return hOutput,fOutput
+            
+            foutputResult = []
+            foutputConversion = lambda i:(np.argmax(fOutput[i]))        
+            for i in range(len(fOutput)):
+                foutputResult.append(foutputConversion(i))
+                
+            return hOutput,fOutput,foutputResult,self.label_data
 #            print ("trial #%d" %epoch)
 #    
 #            correctAnswer, errorTable = self.evaluateResult(fOutput,label_data)
 #            
 #            print ("accuracy is %0.2f" %(correctAnswer/len(finalOutput)*100))
     
-    def evaluateResult(self,Output):
-        correctAnswer = 0
-        errorTable = []
-        for i in range(len(Output)):
-            error = self.label_data[i] - np.argmax(Output[i])
-            errorTable.append(error)
-            if error == 0:
-                correctAnswer += 1
-        return correctAnswer, errorTable
+#    def evaluateResult(self,outputResult):
+#        error = np.array(self.label_data) - np.array(outputResult)
+#        print (error)
+#        return error
+#        
         
-        
-    def errorGradientFun(layerOutput,error):
-        errorGradient = layerOutput*(1-layerOutput) * error
+    def errorGradientFun(self,outputResult,error):
+        errorGradient = outputResult*(1-outputResult) * error
         return errorGradient
         
-    def weightTraining(self,errorTable):
+    def weightTraining(self,hiddenOutput,outputResult,l_rate):
         w1,w2,b1,b2 = np.copy(self.w1),np.copy(self.w2),np.copy(self.b1),np.copy(self.b2)
         
-        
-        #e2 is the errorGradient at output layer
-        e2 = self.errorGradientFun()
+        outputResult = np.array(outputResult)
+        w2error = np.array(self.label_data) - outputResult
+        w2errorGradient = self.errorGradientFun(outputResult,w2error)
+        w2Correction = l_rate *hiddenOutput*w2errorGradient
+
+        w1error = np.dot(w2error,w2)
+        w1errorGradient = self.errorGradientFun(hiddenOutput,w1error)
+        # = l_rate*self.
+
         
 
         #e1 is the errorGraident at hidden layer    
@@ -91,10 +98,10 @@ f = data_loader.data_loader()
 datafile = f.loading("training")
 datafile = list(datafile)
 
-test = backProp(28*28,10,10)
+test = backProp(28*28,20,10)
 
-tests = test.forwardPath(2,10000,datafile)
-hOutput,fOutput = tests
-tests = test.evaluateResult(fOutput)
-correctAnswer,errorTable = tests
-test.weightTraining(errorTable)
+tests = test.forwardPath(1,10,datafile)
+hOutput,fOutput,outputResult,expected_result = tests
+
+tests = test.weightTraining(hOutput,outputResult,0.0005)
+
