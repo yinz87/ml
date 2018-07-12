@@ -21,22 +21,28 @@ class data_loader():
             Label_File_Name = "t10k-labels.idx1-ubyte"
         else:
             raise ValueError
-            
+        
         with open (Label_File_Name,'rb') as label_data:
             magic, size = struct.unpack(">ll",label_data.read(8))
             label = np.fromfile(label_data,dtype="int8")
-            
+
         with open (Image_File_Name,'rb') as img_data:
             magic,size,row,col = struct.unpack(">llll",img_data.read(16))
             img = np.fromfile(img_data,dtype="int8").reshape(len(label),row,col)
             np.place(img,img!=0,1)
-            
+
+        label_like_shape = np.zeros((len(label),10))
+        
+        for i in range(len(label)):
+            label_like_shape[i][label[i]] = 1
+        
+        label = label_like_shape
+
         Image_Label = lambda i: (img[i],label[i])
         for j in range(len(label)):
             yield Image_Label(j)
-
+        
         
     def drawing(self,img):
         plt.imshow(img,cmap=mp.cm.Greys)
         plt.show()
-        
