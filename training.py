@@ -14,91 +14,78 @@ class backProp():
         self.bias = []
         for i in range (1,len(size)):
             self.weight.append(np.random.randn(size[i],size[i-1]))
-            bias = np.random.randn(size[i])
-            self.bias.append(bias.reshape(len(bias),1))
+            a = np.random.randn(size[i],1)
+            self.bias.append(a)
             
     def sigmoid(self,z):
-        y = 1.0/(1.0+ np.exp(-z)) 
+        y = 1.0/(1.0 + np.exp(-z)) 
         return y
 
     def activation(self,y):
         z = self.sigmoid(y)
         return z
             
-    def mini_batch(self,mini_batch_size,datafile):
-        np.random.shuffle(datafile)
-        if (mini_batch_size >= len(datafile)):
+    def mini_batch(self,mini_batch_size,training_data):
+        np.random.shuffle(training_data)
+        if (mini_batch_size >= len(training_data)):
             raise ValueError("mini_batch_size should be less than the datafile size")
             exit()
-        selector = np.random.randint(len(datafile)-mini_batch_size)
-        mini_batch = datafile[selector:selector+mini_batch_size] #shape [mini_batch_size,2]
+        selector = np.random.randint(len(training_data)-mini_batch_size)
+        mini_batch = training_data[selector:selector+mini_batch_size] #shape [mini_batch_size,2]
         img_data,label_data = [i[0] for i in mini_batch],[i[1] for i in mini_batch]
         label_data = np.transpose(label_data)
-        img_data_reshaped = np.reshape(img_data,(np.size(img_data[0]),len(img_data))) 
+        img_data_reshaped = np.reshape(img_data,(np.size(img_data[0]),len(img_data)))
         return label_data,img_data_reshaped
-        
+    
     def forwardPath(self,img_data):
+        activations = []
         activations = [img_data]
-        zs = []
         for layer in range(len(self.weight)):
             z = np.dot(self.weight[layer],activations[layer])+self.bias[layer]
-            zs.append(z)
             activations.append(self.activation(z))
-        return activations,zs
-        
+        return activations
     
     def sigmoid_prime(self,z):
-        return self.sigmoid(z)*(1-self.sigmoid(z))
+        return (z)*(1-z)
         
-    def weightTraining(self,l_rate,label,output,zs):
-        output_error = output[-1] - label#output = [10,m]
+    def weightTraining(self,l_rate,label,activations,batch_size):
+        output_error = activations[-1] - label#output = [10,m]
         errors = []
         errors.append(output_error)
-        error_gradients = []
-        
+        for i in range(len(activations)-1):
+            error = self.sigmoid_prime(activations[-2-i]) * (np.dot(self.weight[-1-i].T,errors[-1-i]))
+            errors.insert(0,error)
+        for j in range(len(self.weight)):
+            self.weight[j] = self.weight[j] + l_rate/batch_size*np.dot(errors[1+j],activations[j].T)
+            self.bias[j] = self.bias[j] + np.sum(errors[1+j],axis=1,keepdims = True)/batch_size
 
-        for i in range(len(output)-1):
-            error_gradient = self.sigmoid_prime(zs[-1-i]) * errors[i]
-            error_gradients.append(error_gradient)
-            delta_w = l_rate*error_gradients[i].dot(output[-2-i].T)
-            errors.append(self.weight[-1-i].T.dot(errors[i]))
-            self.weight[-1-i] = self.weight[-1-i] - delta_w
-            self.bias[-1-i] = self.bias[-1-i]*error_gradient[i]*(-1)
+    def evaluate(self,test_data):
+        img,label = [i[0] for i in test_data],[i[1] for i in test_data]
+        img = np.reshape(img,(np.size(img[0]),len(img)))
+        a = self.forwardPath(img)
+        a = a[-1].T
+
+        test_results = [(np.argmax(a[i]),np.argmax(label[i])) for i in range(len(label))]
         
-    def evaluate(self,label,output):
-        output,label = output.T,label.T
-        correct_label = 0
-        for i in range(len(label)):
-            if np.argmax(label[i]) == np.argmax(output[i]):
-                correct_label += 1
-       # print ("accuracy is %f" %(correct_label/(len(label))*100))
+        a = sum(test_results[i][0] == test_results[i][1] for i in range(len(label)))
         
-    def backProps(self,l_rate,mini_batch_size,datafile):
-        label_data,img_data = self.mini_batch(mini_batch_size,datafile)
-        outputs = []
+        print ("accuracy = %f" %(a/len(label)*100))
+        
+    def backProps(self,l_rate,mini_batch_size,training_data,test_data):
+        label_data,img_data_reshaped = self.mini_batch(mini_batch_size,training_data)
         for i in range(10):
-            activations,zs = self.forwardPath(img_data)
-            self.evaluate(label_data,activations[-1])
-            self.weightTraining(l_rate,label_data,activations,zs)
-            outputs.append(activations)
-        return outputs,label_data
+            activations = self.forwardPath(img_data_reshaped)
+            self.weightTraining(l_rate,label_data,activations,mini_batch_size)
             
+        self.evaluate(test_data)  
+        
 f = data_loader.data_loader()
-datafile = f.loading("training")
-datafile = np.array(list(datafile))
+training_data = f.loading("training")
+training_data = np.array(list(training_data))
 
-test = backProp([28*28,25,10])
+test_data = f.loading("testing")
+test_data = np.array(list(test_data))
 
-tests,label_data = test.backProps(0.1,2,datafile)
+test = backProp([28*28,300,70,10])
 
-#a = np.round(tests[5][-1].T,decimals=1)
-#b = np.round(tests[6][-1].T,decimals=1)
-#c = label_data.T
-
-#print (a)
-#print ( )
-#print (b)
-#print ( )
-#print (c)
-#print (np.argmax(b[1]))
-#print (np.argmax(label_data.T[1]))
+test.backProps(0.1,40000 ,training_data,test_data)
